@@ -21,47 +21,62 @@ Render := [].{
 	draw! : Draw.Frame, Sprites, Game => Try({}, _)
 	draw! = |frame, sprites, game| {
 		frame.clear!(Color.from_hex_rgb(0x1d2b53))
-		draw_draw_pile!(game, frame, sprites.cards)
-		draw_card_place1!(game, frame, sprites.cards)
-		draw_card_place2!(game, frame, sprites.cards)
-		draw_card_place3!(game, frame, sprites.cards)
-		draw_card_place4!(game, frame, sprites.cards)
-		draw_weapon!(game, frame, sprites.cards)
+
+		scale = calc_scale(frame.size!().width)
+
+		[
+			draw_draw_pile(game, sprites.cards, scale),
+			draw_card_place1(game, sprites.cards, scale),
+			draw_card_place2(game, sprites.cards, scale),
+			draw_card_place3(game, sprites.cards, scale),
+			draw_card_place4(game, sprites.cards, scale),
+		].concat(draw_weapon(game, sprites.cards, scale))
+			.for_each!(|td| Draw.texture!(frame, td))
 
 		text = match game.is_finished {
 			Won(p) =>
 				":) ${p.to_str()}"
 			Loose(p) =>
-				"-_- -${p.to_str()}"
+				":( -${p.to_str()}"
 			Continue =>
 				game.health.to_str()
 		}
-		frame.text_at!({ pos: { x: rect_weapon.x + rect_weapon.width + border * 10, y: rect_weapon.y + rect_weapon.height / 2 }, text, size: 10 * scale, color: Color.white })
+		frame.text_at!({
+			pos: {
+				x: (rect_weapon.x + rect_weapon.width + border * 10) * scale,
+				y: (rect_weapon.y + rect_weapon.height / 2) * scale,
+			},
+			text,
+			size: 10 * scale,
+			color: Color.white,
+		})
 
 		Ok({})
 	}
 
-	clicked_on : _ -> [DrawPile, Place1, Place2, Place3, Place4, Nothing]
-	clicked_on = |mouse| {
+	clicked_on : _, F32 -> [DrawPile, Place1, Place2, Place3, Place4, Nothing]
+	clicked_on = |mouse, window_width| {
 		pt = mouse.position()
 
-		if Math.contains(rect_draw_pile, pt) {
+		scale = calc_scale(window_width)
+
+		if Math.contains(scale_rect(rect_draw_pile,scale), pt) {
 			return DrawPile
 		}
 
-		if Math.contains(rect_card_place1, pt) {
+		if Math.contains(scale_rect(rect_card_place1, scale), pt) {
 			return Place1
 		}
 
-		if Math.contains(rect_card_place2, pt) {
+		if Math.contains(scale_rect(rect_card_place2, scale), pt) {
 			return Place2
 		}
 
-		if Math.contains(rect_card_place3, pt) {
+		if Math.contains(scale_rect(rect_card_place3, scale), pt) {
 			return Place3
 		}
 
-		if Math.contains(rect_card_place4, pt) {
+		if Math.contains(scale_rect(rect_card_place4, scale), pt) {
 			return Place4
 		}
 
@@ -69,122 +84,114 @@ Render := [].{
 	}
 }
 
-draw_draw_pile! = |game, frame, card_sprite| {
+calc_scale = |width| {
+    base_width = ((rect_draw_pile.x + rect_draw_pile.width) * 5 + border)
+	width / base_width
+}
+
+draw_draw_pile = |game, card_sprite, scale| {
 	if game.draw_pile.is_empty() {
-		draw_card_empty!(frame, card_sprite, rect_draw_pile)
+		draw_card_empty(card_sprite, rect_draw_pile, scale)
 	} else {
-		draw_card_background!(frame, card_sprite, rect_draw_pile)
+		draw_card_background(card_sprite, rect_draw_pile, scale)
 	}
 }
 
-draw_card_place1! = |game, frame, card_sprite| {
+draw_card_place1 = |game, card_sprite, scale| {
 	match game.card_place1 {
-		Empty => draw_card_empty!(frame, card_sprite, rect_card_place1)
-		OpenCard(card) => draw_card!(frame, card_sprite, card, rect_card_place1)
+		Empty => draw_card_empty(card_sprite, rect_card_place1, scale)
+		OpenCard(card) => draw_card(card_sprite, card, rect_card_place1, scale)
 	}
 }
 
-draw_card_place2! = |game, frame, card_sprite| {
+draw_card_place2 = |game, card_sprite, scale| {
 	match game.card_place2 {
-		Empty => draw_card_empty!(frame, card_sprite, rect_card_place2)
-		OpenCard(card) => draw_card!(frame, card_sprite, card, rect_card_place2)
+		Empty => draw_card_empty(card_sprite, rect_card_place2, scale)
+		OpenCard(card) => draw_card(card_sprite, card, rect_card_place2, scale)
 	}
 }
 
-draw_card_place3! = |game, frame, card_sprite| {
+draw_card_place3 = |game, card_sprite, scale| {
 	match game.card_place3 {
-		Empty => draw_card_empty!(frame, card_sprite, rect_card_place3)
-		OpenCard(card) => draw_card!(frame, card_sprite, card, rect_card_place3)
+		Empty => draw_card_empty(card_sprite, rect_card_place3, scale)
+		OpenCard(card) => draw_card(card_sprite, card, rect_card_place3, scale)
 	}
 }
 
-draw_card_place4! = |game, frame, card_sprite| {
+draw_card_place4 = |game, card_sprite, scale| {
 	match game.card_place4 {
-		Empty => draw_card_empty!(frame, card_sprite, rect_card_place4)
-		OpenCard(card) => draw_card!(frame, card_sprite, card, rect_card_place4)
+		Empty => draw_card_empty(card_sprite, rect_card_place4, scale)
+		OpenCard(card) => draw_card(card_sprite, card, rect_card_place4, scale)
 	}
 }
 
-draw_weapon! : Game, Draw.Frame, Draw.Texture => {}
-draw_weapon! = |game, frame, card_sprite| {
+draw_weapon = |game, card_sprite, scale| {
 	match game.weapon {
-		NoWeapon => draw_card_empty!(frame, card_sprite, rect_weapon)
+		NoWeapon => [draw_card_empty(card_sprite, rect_weapon, scale)]
 		Weapon(weapon) => {
-			draw_card!(frame, card_sprite, { color: Diamond, value: weapon.value }, rect_weapon)
-			match weapon.used_on {
-				Monster(card) => {
-					draw_card!(frame, card_sprite, card, rect_weapon_monster)
-				}
-				NoMonster => {}
-			}
+			[draw_card(card_sprite, { color: Diamond, value: weapon.value }, rect_weapon, scale)]
+				.concat(
+					match weapon.used_on {
+						Monster(card) => {
+							[draw_card(card_sprite, card, rect_weapon_monster, scale)]
+						}
+						NoMonster => []
+					},
+				)
 		}
 	}
 }
 
-draw_card! = |frame, card_sprite, card, rect| {
-	frame.texture!({
-		texture: card_sprite,
-		source: card_texture_source(card),
-		dest: rect,
-		origin: Math.zero,
-		rotation: 0,
-		tint: Color.white,
-	})
+draw_card = |card_sprite, card, rect, scale| {
+	..Draw.texture_draw(card_sprite),
+	source: card_texture_source(card),
+	dest: scale_rect(rect, scale),
 }
 
-draw_card_background! = |frame, card_sprite, rect| {
-	frame.texture!({
-		texture: card_sprite,
-		source: card_texture_background,
-		dest: rect,
-		origin: Math.zero,
-		rotation: 0,
-		tint: Color.white,
-	})
+draw_card_background = |card_sprite, rect, scale| {
+	..Draw.texture_draw(card_sprite),
+	source: card_texture_background,
+	dest: scale_rect(rect, scale),
 }
 
-draw_card_empty! = |frame, card_sprite, rect| {
-	frame.texture!({
-		texture: card_sprite,
-		source: card_texture_empty,
-		dest: rect,
-		origin: Math.zero,
-		rotation: 0,
-		tint: Color.white,
-	})
+draw_card_empty = |card_sprite, rect, scale| {
+	..Draw.texture_draw(card_sprite),
+	source: card_texture_empty,
+	dest: scale_rect(rect, scale),
 }
 
-scale = 3
+scale_rect = |rect, scale| {
+	{
+		x: rect.x * scale,
+		y: rect.y * scale,
+		width: rect.width * scale,
+		height: rect.height * scale,
+	}
+}
 
-border = 5 * scale
-
-card_source_width = 42
-
-card_source_height = 60
+card_source_base = {
+	x: 0,
+	y: 0,
+	width: 42,
+	height: 60,
+}
 
 card_texture_background = {
-	width = card_source_width
-	height = card_source_height
-	x = 13 * (width - 1)
-	y = height - 1
-	{ x, y, width, height }
+	x = 13 * (card_source_base.width - 1)
+	y = card_source_base.height - 1
+	{ ..card_source_base, x, y }
 }
 
 card_texture_empty = {
-	width = card_source_width
-	height = card_source_height
-	x = 13 * (width - 1)
-	y = 0
-	{ x, y, width, height }
+	x = 13 * (card_source_base.width - 1)
+	{ ..card_source_base, x }
 }
 
 card_texture_source : Game.Card -> Math.Rect
 card_texture_source = |card| {
-	width = card_source_width
-	height = card_source_height
 	value = if (card.value == 14) 1 else card.value
 	cv = (value - 1) |> U8.mod_by(13)
-	x = cv.to_f32() * (width - 1)
+	x = cv.to_f32() * (card_source_base.width - 1)
 	y = (
 		match card.color {
 			Heart => 0
@@ -192,56 +199,52 @@ card_texture_source = |card| {
 			Club => 2
 			Spade => 3
 		}
-	) * (height - 1)
+	) * (card_source_base.height - 1)
 
-	{ x, y, width, height: 60 }
+	{ ..card_source_base, x, y }
+}
+
+border = 5
+
+rect_base = {
+	x: 0,
+	y: 0,
+	width: card_source_base.width,
+	height: card_source_base.height,
 }
 
 rect_draw_pile = {
+	..rect_base,
 	x: border,
 	y: border,
-	width: card_source_width * scale,
-	height: card_source_height * scale,
 }
 
 rect_card_place1 = {
+	..rect_draw_pile,
 	x: rect_draw_pile.x + rect_draw_pile.width + border,
-	y: border,
-	width: card_source_width * scale,
-	height: card_source_height * scale,
 }
 
 rect_card_place2 = {
+	..rect_card_place1,
 	x: rect_card_place1.x + rect_card_place1.width + border,
-	y: border,
-	width: card_source_width * scale,
-	height: card_source_height * scale,
 }
 
 rect_card_place3 = {
+	..rect_card_place2,
 	x: rect_card_place2.x + rect_card_place2.width + border,
-	y: border,
-	width: card_source_width * scale,
-	height: card_source_height * scale,
 }
 
 rect_card_place4 = {
+	..rect_card_place3,
 	x: rect_card_place3.x + rect_card_place3.width + border,
-	y: border,
-	width: card_source_width * scale,
-	height: card_source_height * scale,
 }
 
 rect_weapon = {
-	x: rect_draw_pile.x + rect_draw_pile.width + border,
-	y: rect_card_place1.y + rect_card_place1.height + border * 2,
-	width: card_source_width * scale,
-	height: card_source_height * scale,
+	..rect_draw_pile,
+	y: rect_draw_pile.y + rect_draw_pile.height + border * 2,
 }
 
 rect_weapon_monster = {
-	x: rect_weapon.x,
+	..rect_weapon,
 	y: rect_weapon.y + 5 * border,
-	width: card_source_width * scale,
-	height: card_source_height * scale,
 }

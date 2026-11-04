@@ -19,7 +19,9 @@ program = { init!, update!, render! }
 
 init! : App.Init(Model, _)
 init! = App.init(
-	App.default.with_title("Scoundrel"),
+	App.default
+		.with_title("Scoundrel")
+		.with_resizable(Bool.True),
 	|io| {
 		sprites = Render.init!()?
 		rng_init = Random.seed(U64.to_u32_wrap(io.entropy!()))
@@ -42,9 +44,9 @@ update! = |model, input, _io| {
 	$game = $game.check_finished()
 
 	$game = if mouse.button_pressed(Left) {
-	    clicked_on = Render.clicked_on(mouse)
+		clicked_on = Render.clicked_on(mouse, input.window.size.width.to_f32())
 		if $game.is_finished != Continue {
-			if  clicked_on == DrawPile {
+			if clicked_on == DrawPile {
 				(g, p) = Game.new(model.rng)
 				return Ok({ ..model, game: g, rng: p })
 			}
@@ -64,8 +66,6 @@ update! = |model, input, _io| {
 	}
 	Ok({ ..model, game: $game })
 }
-
-
 
 render! : Model, Draw.Frame => Try({}, [Exit(I64)])
 render! = |model, frame| {
