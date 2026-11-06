@@ -24,7 +24,7 @@ init! = App.init(
 		.with_resizable(Bool.True),
 	|io| {
 		sprites = Render.init!()?
-		rng_init = Random.seed(U64.to_u32_wrap(io.entropy!()))
+		rng_init = Random.seed(io.entropy!().to_u32_wrap())
 		(game, rng) = Game.new(rng_init)
 		Ok({
 			sprites,
@@ -44,7 +44,7 @@ update! = |model, input, _io| {
 	$game = $game.check_finished()
 
 	$game = if mouse.button_pressed(Left) {
-		clicked_on = Render.clicked_on(mouse, input.window.size.width.to_f32())
+		clicked_on = Render.clicked_on(mouse, convert_window_size(input.window.size))
 		if $game.is_finished != Continue {
 			if clicked_on == DrawPile {
 				(g, p) = Game.new(model.rng)
@@ -70,4 +70,8 @@ update! = |model, input, _io| {
 render! : Model, Draw.Frame => Try({}, [Exit(I64)])
 render! = |model, frame| {
 	Render.draw!(frame, model.sprites, model.game)
+}
+
+convert_window_size = |{width, height}| {
+    {width: width.to_f32(), height: height.to_f32()}
 }

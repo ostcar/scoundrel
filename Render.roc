@@ -22,7 +22,7 @@ Render := [].{
 	draw! = |frame, sprites, game| {
 		frame.clear!(Color.from_hex_rgb(0x1d2b53))
 
-		scale = calc_scale(frame.size!().width)
+		scale = calc_scale(frame.size!())
 
 		[
 			draw_draw_pile(game, sprites.cards, scale),
@@ -54,13 +54,13 @@ Render := [].{
 		Ok({})
 	}
 
-	clicked_on : _, F32 -> [DrawPile, Place1, Place2, Place3, Place4, Nothing]
-	clicked_on = |mouse, window_width| {
+	clicked_on : _, _ -> [DrawPile, Place1, Place2, Place3, Place4, Nothing]
+	clicked_on = |mouse, window_size| {
 		pt = mouse.position()
 
-		scale = calc_scale(window_width)
+		scale = calc_scale(window_size)
 
-		if Math.contains(scale_rect(rect_draw_pile,scale), pt) {
+		if Math.contains(scale_rect(rect_draw_pile, scale), pt) {
 			return DrawPile
 		}
 
@@ -84,9 +84,13 @@ Render := [].{
 	}
 }
 
-calc_scale = |width| {
-    base_width = ((rect_draw_pile.x + rect_draw_pile.width) * 5 + border)
-	width / base_width
+calc_scale : {width: F32, height: F32} -> F32
+calc_scale = |{width, height}| {
+	base_width = rect_base.width * 5 + border * 6
+	base_height = rect_base.height * 3
+	scale_width = width / base_width
+	scale_height = height / base_height
+	F32.min(scale_width, scale_height)
 }
 
 draw_draw_pile = |game, card_sprite, scale| {

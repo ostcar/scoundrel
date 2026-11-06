@@ -35,7 +35,7 @@ Game := {
 
 	check_finished : Game -> Game
 	check_finished = |game| {
-	    {..game, is_finished: is_finished(game)}
+		{ ..game, is_finished: is_finished(game) }
 	}
 
 	new_room : Game -> Game
@@ -195,7 +195,7 @@ fight_monster = |game, card, skip_weapon| {
 						}
 					}
 					NoMonster => {
-					    if skip_weapon {
+						if skip_weapon {
 							(card.value, Weapon(w))
 						} else if w.value >= card.value {
 							(0, Weapon({ ..w, used_on: Monster(card) }))
