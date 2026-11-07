@@ -24,14 +24,14 @@ Render := [].{
 
 		scale = calc_scale(frame.size!())
 
-		[
-			draw_draw_pile(game, sprites.cards, scale),
-			draw_card_place1(game, sprites.cards, scale),
-			draw_card_place2(game, sprites.cards, scale),
-			draw_card_place3(game, sprites.cards, scale),
-			draw_card_place4(game, sprites.cards, scale),
-		].concat(draw_weapon(game, sprites.cards, scale))
-			.for_each!(|td| Draw.texture!(frame, td))
+		instaces = [
+			draw_draw_pile(game, scale),
+			draw_card_place1(game, scale),
+			draw_card_place2(game, scale),
+			draw_card_place3(game, scale),
+			draw_card_place4(game, scale),
+		].concat(draw_weapon(game, scale))
+		Draw.texture_instances!(frame, sprites.cards, instaces)
 
 		text = match game.is_finished {
 			Won(p) =>
@@ -84,8 +84,8 @@ Render := [].{
 	}
 }
 
-calc_scale : {width: F32, height: F32} -> F32
-calc_scale = |{width, height}| {
+calc_scale : { width : F32, height : F32 } -> F32
+calc_scale = |{ width, height }| {
 	base_width = rect_base.width * 5 + border * 6
 	base_height = rect_base.height * 3
 	scale_width = width / base_width
@@ -93,51 +93,51 @@ calc_scale = |{width, height}| {
 	F32.min(scale_width, scale_height)
 }
 
-draw_draw_pile = |game, card_sprite, scale| {
+draw_draw_pile = |game, scale| {
 	if game.draw_pile.is_empty() {
-		draw_card_empty(card_sprite, rect_draw_pile, scale)
+		draw_card_empty(rect_draw_pile, scale)
 	} else {
-		draw_card_background(card_sprite, rect_draw_pile, scale)
+		draw_card_background(rect_draw_pile, scale)
 	}
 }
 
-draw_card_place1 = |game, card_sprite, scale| {
+draw_card_place1 = |game, scale| {
 	match game.card_place1 {
-		Empty => draw_card_empty(card_sprite, rect_card_place1, scale)
-		OpenCard(card) => draw_card(card_sprite, card, rect_card_place1, scale)
+		Empty => draw_card_empty(rect_card_place1, scale)
+		OpenCard(card) => draw_card(card, rect_card_place1, scale)
 	}
 }
 
-draw_card_place2 = |game, card_sprite, scale| {
+draw_card_place2 = |game, scale| {
 	match game.card_place2 {
-		Empty => draw_card_empty(card_sprite, rect_card_place2, scale)
-		OpenCard(card) => draw_card(card_sprite, card, rect_card_place2, scale)
+		Empty => draw_card_empty(rect_card_place2, scale)
+		OpenCard(card) => draw_card(card, rect_card_place2, scale)
 	}
 }
 
-draw_card_place3 = |game, card_sprite, scale| {
+draw_card_place3 = |game, scale| {
 	match game.card_place3 {
-		Empty => draw_card_empty(card_sprite, rect_card_place3, scale)
-		OpenCard(card) => draw_card(card_sprite, card, rect_card_place3, scale)
+		Empty => draw_card_empty(rect_card_place3, scale)
+		OpenCard(card) => draw_card(card, rect_card_place3, scale)
 	}
 }
 
-draw_card_place4 = |game, card_sprite, scale| {
+draw_card_place4 = |game, scale| {
 	match game.card_place4 {
-		Empty => draw_card_empty(card_sprite, rect_card_place4, scale)
-		OpenCard(card) => draw_card(card_sprite, card, rect_card_place4, scale)
+		Empty => draw_card_empty(rect_card_place4, scale)
+		OpenCard(card) => draw_card(card, rect_card_place4, scale)
 	}
 }
 
-draw_weapon = |game, card_sprite, scale| {
+draw_weapon = |game, scale| {
 	match game.weapon {
-		NoWeapon => [draw_card_empty(card_sprite, rect_weapon, scale)]
+		NoWeapon => [draw_card_empty(rect_weapon, scale)]
 		Weapon(weapon) => {
-			[draw_card(card_sprite, { color: Diamond, value: weapon.value }, rect_weapon, scale)]
+			[draw_card({ color: Diamond, value: weapon.value }, rect_weapon, scale)]
 				.concat(
 					match weapon.used_on {
 						Monster(card) => {
-							[draw_card(card_sprite, card, rect_weapon_monster, scale)]
+							[draw_card(card, rect_weapon_monster, scale)]
 						}
 						NoMonster => []
 					},
@@ -146,31 +146,37 @@ draw_weapon = |game, card_sprite, scale| {
 	}
 }
 
-draw_card = |card_sprite, card, rect, scale| {
-	..Draw.texture_draw(card_sprite),
+texture_instance_config_empty = {
+	source: Math.rect(0, 0, 0, 0),
+	dest: Math.rect(0, 0, 0, 0),
+	origin: Math.zero,
+	rotation: 0,
+	tint: Color.white,
+}
+
+draw_card = |card, rect, scale| {
+	..texture_instance_config_empty,
 	source: card_texture_source(card),
 	dest: scale_rect(rect, scale),
 }
 
-draw_card_background = |card_sprite, rect, scale| {
-	..Draw.texture_draw(card_sprite),
+draw_card_background = |rect, scale| {
+	..texture_instance_config_empty,
 	source: card_texture_background,
 	dest: scale_rect(rect, scale),
 }
 
-draw_card_empty = |card_sprite, rect, scale| {
-	..Draw.texture_draw(card_sprite),
+draw_card_empty = |rect, scale| {
+	..texture_instance_config_empty,
 	source: card_texture_empty,
 	dest: scale_rect(rect, scale),
 }
 
 scale_rect = |rect, scale| {
-	{
-		x: rect.x * scale,
-		y: rect.y * scale,
-		width: rect.width * scale,
-		height: rect.height * scale,
-	}
+	x: rect.x * scale,
+	y: rect.y * scale,
+	width: rect.width * scale,
+	height: rect.height * scale,
 }
 
 card_source_base = {
